@@ -242,5 +242,56 @@ curl -X POST http://localhost:8080/api/motor/on \
 
 ---
 
+## Git Commit Standards
+
+This project follows [Conventional Commits](https://www.conventionalcommits.org/) for clear and structured commit messages.
+
+### Commit Message Format
+```
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+### Types
+- `feat`: New feature
+- `fix`: Bug fix
+- `docs`: Documentation changes
+- `style`: Code style changes (formatting, etc.)
+- `refactor`: Code refactoring
+- `test`: Adding or updating tests
+- `chore`: Maintenance tasks
+
+### Examples
+```sh
+# New feature
+git commit -m "feat: add motor queue quota system"
+
+# Bug fix
+git commit -m "fix: resolve JWT token validation issue"
+
+# Documentation
+git commit -m "docs: add comprehensive ERD and database schema"
+
+# Test addition
+git commit -m "test: add user registration and login tests"
+
+# Code refactoring
+git commit -m "refactor: improve error handling in MQTT client"
+
+# Maintenance
+git commit -m "chore: update dependencies"
+```
+
+### Benefits
+- **Clear history**: Easy to understand what each commit does
+- **Automated changelogs**: Tools can generate release notes
+- **Team collaboration**: Consistent commit messages across team
+- **Git hooks**: Can enforce standards with pre-commit hooks
+
+---
+
 ## License
 MIT 
