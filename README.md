@@ -98,6 +98,44 @@ Client (Postman, Web, Mobile)
 
 ---
 
+## Database Schema (ERD)
+
+### Current Schema
+```
+┌─────────────────┐
+│      users      │
+├─────────────────┤
+│ id (PK)         │ ← Primary Key
+│ email (UNIQUE)  │ ← Unique email
+│ password        │ ← Hashed password
+└─────────────────┘
+```
+
+### Potential Future Schema
+```
+┌─────────────────┐    ┌─────────────────────┐    ┌─────────────────┐
+│      users      │    │   motor_requests    │    │   device_data   │
+├─────────────────┤    ├─────────────────────┤    ├─────────────────┤
+│ id (PK)         │◄───│ id (PK)             │    │ id (PK)         │
+│ email (UNIQUE)  │    │ user_id (FK)        │    │ device_id       │
+│ password        │    │ request_at          │    │ sensor_value    │
+│ created_at      │    │ duration            │    │ timestamp       │
+│ updated_at      │    │ status              │    │ topic           │
+└─────────────────┘    └─────────────────────┘    └─────────────────┘
+```
+
+**Relationships:**
+- `users` → `motor_requests` (One-to-Many)
+- Future: `users` → `device_data` (One-to-Many)
+
+**Notes:**
+- Currently only `users` table exists
+- Motor requests are handled in-memory (queue system)
+- Device data could be stored in database for persistence
+- All timestamps use SQLite's built-in datetime functions
+
+---
+
 ## Project Structure
 
 ```
@@ -121,16 +159,6 @@ go-mqtt-backend/
 └── mqtt/
     └── client.go        # MQTT client wrapper
 ```
-
----
-
-## Features
-- User registration and login with JWT authentication (registration is now email/password only)
-- MQTT communication with ESP32 (publish/subscribe)
-- REST API for user and device interaction
-- Queueing and daily quota for motor-on requests
-- SQLite database via GORM ORM
-- Configurable via environment variables
 
 ---
 
