@@ -1,0 +1,40 @@
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Test database files
+test*.db
+*_test.db
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Log files
+*.log
+
+# Binary files
+*.exe
+*.dll
+*.so
+*.dylib
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Go specific
+*.test
+*.out
+
+# Temporary files
+*.tmp
+*.temp 
