@@ -17,5 +17,5 @@ func Connect(dbPath string) error { // Connect opens the database and runs migra
 	if err != nil {                                          // If error, return it
 		return err
 	}
-	return DB.AutoMigrate(&models.User{}) // Auto-migrate the User model (create table if needed)
+	return DB.AutoMigrate(&models.User{}, &models.DeviceActivation{}) // Auto-migrate the User model (create table if needed)
 }

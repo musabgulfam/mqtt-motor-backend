@@ -109,19 +109,28 @@ Client (Postman, Web, Mobile)
 │ email (UNIQUE)  │ ← Unique email
 │ password        │ ← Hashed password
 └─────────────────┘
+
+┌─────────────────┐
+│deviceActivation │
+├─────────────────┤
+│ id (PK)         │ ← Primary Key
+│ user_id (FK)    │ ← Foreign key to users
+│ request_at      │ ← Time
+│ duration        │ ← Time
+└─────────────────┘
 ```
 
 ### Potential Future Schema
 ```
 ┌─────────────────┐    ┌─────────────────────┐    ┌─────────────────┐
-│      users      │    │   motor_requests    │    │   device_data   │
+│      users      │    │  deviceActivation   │    │   device_data   │
 ├─────────────────┤    ├─────────────────────┤    ├─────────────────┤
 │ id (PK)         │◄───│ id (PK)             │    │ id (PK)         │
 │ email (UNIQUE)  │    │ user_id (FK)        │    │ device_id       │
-│ password        │    │ request_at          │    │ sensor_value    │
-│ created_at      │    │ duration            │    │ timestamp       │
-│ updated_at      │    │ status              │    │ topic           │
-└─────────────────┘    └─────────────────────┘    └─────────────────┘
+│ password        │    │ request_at          │    │ state           │
+│ created_at      │    │ duration            │    │ topic           │
+│ updated_at      │    └─────────────────────┘    └─────────────────┘
+└─────────────────┘                               
 ```
 
 **Relationships:**
@@ -129,10 +138,9 @@ Client (Postman, Web, Mobile)
 - Future: `users` → `device_data` (One-to-Many)
 
 **Notes:**
-- Currently only `users` table exists
-- Motor requests are handled in-memory (queue system)
-- Device data could be stored in database for persistence
-- All timestamps use SQLite's built-in datetime functions
+- `DeviceActivation.user_id` references `User.id`.
+- `duration` is stored as a Go `time.Duration` (in the DB, usually as an integer representing nanoseconds).
+- Timestamps are managed automatically by GORM.
 
 ---
 
@@ -149,11 +157,13 @@ go-mqtt-backend/
 ├── database/
 │   └── database.go      # Database connection & setup
 ├── models/
-│   └── user.go          # Data structures (User model)
+│   ├── user.go          # Data structures (User model)
+│   └── device_activation.go # Data structures (DeviceActivation model)
 ├── handlers/
 │   ├── user.go          # User registration/login logic
 │   ├── mqtt.go          # MQTT commands & motor queue logic
-│   └── user_test.go     # Automated tests for user handlers
+│   ├── user_test.go     # Automated tests for user handlers
+│   └── mqtt_test.go     # Automated tests for MQTT handlers
 ├── middleware/
 │   └── auth.go          # JWT authentication middleware
 └── mqtt/
@@ -174,9 +184,44 @@ go-mqtt-backend/
 - `POST /api/send` — Send a command to ESP32 via MQTT
   - `{ "topic": "esp32/command", "payload": "on" }`
 - `GET /api/device` — Get device data (placeholder)
-- `POST /api/motor/on` — Queue a motor-on request with duration (seconds)
-  - `{ "duration": 60 }`
-  - Enforces a daily quota (e.g., 1 hour per 24h)
+- `POST /api/motor` — Enqueue a motor activation request
+  - `{ "duration": <minutes> }`
+  - Enforces a daily quota (default: 1 hour per 24h)
+
+---
+
+## Updates & Changes
+
+### 1. Device Activation Logging
+- Added a new model: `DeviceActivation` (see `models/device_activation.go`).
+- All motor activation requests are now logged to the database with user ID, request time, and duration.
+
+### 2. Database Migration
+- Updated `database.Connect()` to auto-migrate both `User` and `DeviceActivation` models.
+
+### 3. Motor Queue & Quota Logic
+- Improved motor queue logic to:
+  - Accept duration in **minutes**.
+  - Enforce a daily quota (default: 1 hour per 24h).
+  - Reset quota every 24 hours.
+- Requests exceeding the quota are rejected with a `429` error.
+
+### 4. JWT User ID Handling
+- JWT tokens now include the user ID in the `"sub"` claim.
+- JWT middleware extracts `"sub"` from the token and sets it in the Gin context as `"userID"`.
+- Handlers retrieve the user ID from the context for logging and authorization.
+
+### 5. MQTT Integration
+- Motor control requests publish `"on"` and `"off"` messages to the `motor/control` MQTT topic.
+- You can subscribe to this topic using:
+  ```sh
+  mosquitto_sub -t motor/control
+  ```
+
+### 6. API Endpoints
+- **POST `/api/motor`**: Enqueue a motor activation request (JWT required).
+  - Request body: `{ "duration": <minutes> }`
+  - Response: Queued or error if quota exceeded.
 
 ---
 
@@ -226,7 +271,7 @@ curl -X POST http://localhost:8080/login \
 
 **Queue Motor Request:**
 ```sh
-curl -X POST http://localhost:8080/api/motor/on \
+curl -X POST http://localhost:8080/api/motor \
   -H "Authorization: Bearer <JWT_TOKEN>" \
   -H "Content-Type: application/json" \
   -d '{"duration":60}'
@@ -294,4 +339,4 @@ git commit -m "chore: update dependencies"
 ---
 
 ## License
-MIT 
+MIT

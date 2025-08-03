@@ -3,6 +3,8 @@
 package handlers // Declares the package name
 
 import ( // Import required packages
+	"go-mqtt-backend/database"
+	"go-mqtt-backend/models"
 	"go-mqtt-backend/mqtt" // MQTT client
 	"net/http"             // HTTP status codes
 	"sync"                 // For mutex (thread safety)
@@ -69,17 +71,16 @@ func processMotorQueue() { // Goroutine to process motor queue
 		motorQuotaMutex.Unlock()       // Unlock
 
 		// --- Motor control logic (commented out) ---
-		// mqtt.Publish("motor/control", "on") // Send ON command
-		// time.Sleep(req.Duration)             // Wait for duration
-		// mqtt.Publish("motor/control", "off") // Send OFF command
-		// ------------------------------------------
+		mqtt.Publish("motor/control", "on")  // Send ON command
+		time.Sleep(req.Duration)             // Wait for duration
+		mqtt.Publish("motor/control", "off") // Send OFF command
 	}
 }
 
 // Handler to enqueue motor-on requests
 func EnqueueMotorRequest(c *gin.Context) {
 	var input struct {
-		Duration int `json:"duration" binding:"required"` // Duration in seconds
+		Duration int `json:"duration" binding:"required"` // Duration in minutes
 	}
 	if err := c.ShouldBindJSON(&input); err != nil { // Parse JSON input
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}) // Return error if invalid
@@ -90,17 +91,33 @@ func EnqueueMotorRequest(c *gin.Context) {
 		totalMotorTime = 0                              // Reset total time
 		quotaResetTime = time.Now().Add(24 * time.Hour) // Set next reset
 	}
-	if totalMotorTime+time.Duration(input.Duration)*time.Second > motorQuota { // If quota exceeded
+	if totalMotorTime+time.Duration(input.Duration)*time.Minute > motorQuota { // If quota exceeded
 		motorQuotaMutex.Unlock()                                                                                      // Unlock
 		c.JSON(http.StatusTooManyRequests, gin.H{"error": "Daily motor-on quota reached. Try again after 24 hours."}) // Return error
 		return
 	}
-	motorQuotaMutex.Unlock() // Unlock
+	motorQuotaMutex.Unlock()          // Unlock
+	userID, exists := c.Get("userID") // Get user ID from context
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user ID not found in token"})
+		return
+	}
+	// Log to DB
+	logEntry := models.DeviceActivation{
+		UserID:    userID.(uint),
+		RequestAt: time.Now(),
+		Duration:  time.Duration(input.Duration) * time.Minute,
+	}
+	if err := database.DB.Create(&logEntry).Error; err != nil {
+		// Optionally handle/log DB error
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to log request"})
+		return
+	}
 	// In a real app, get user ID from JWT claims
 	motorQueue <- &MotorRequest{ // Add request to queue
 		UserID:    0,
 		RequestAt: time.Now(),
-		Duration:  time.Duration(input.Duration) * time.Second,
+		Duration:  time.Duration(input.Duration) * time.Minute,
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Request queued"}) // Success response
 }

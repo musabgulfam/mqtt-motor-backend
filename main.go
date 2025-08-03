@@ -31,8 +31,9 @@ func main() { // Main function, program entry point
 	api := r.Group("/api")               // Create a route group for protected endpoints
 	api.Use(middleware.AuthMiddleware()) // Apply JWT authentication middleware
 	{
-		api.POST("/send", handlers.SendCommand)    // Protected: send MQTT command
-		api.GET("/device", handlers.GetDeviceData) // Protected: get device data
+		api.POST("/send", handlers.SendCommand)          // Protected: send MQTT command
+		api.GET("/device", handlers.GetDeviceData)       // Protected: get device data
+		api.POST("/motor", handlers.EnqueueMotorRequest) // Protected: enqueue motor request
 	}
 
 	r.Run(":8080") // Start the web server on port 8080

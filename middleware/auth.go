@@ -27,6 +27,20 @@ func AuthMiddleware() gin.HandlerFunc { // Returns a Gin middleware function
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token"}) // Return 401
 			return
 		}
+		// Example inside your AuthMiddleware
+		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+			// JWT numbers are float64 by default
+			userIDFloat, ok := claims["sub"].(float64)
+			if !ok {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid user ID in token"})
+				return
+			}
+			c.Set("userID", uint(userIDFloat)) // or c.Set("userID", uint(userIDFloat))
+			c.Next()
+		} else {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+			return
+		}
 		c.Next() // Continue to next handler
 	}
 }
