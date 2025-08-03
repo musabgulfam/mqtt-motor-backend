@@ -62,15 +62,10 @@ func processMotorQueue() { // Goroutine to process motor queue
 			totalMotorTime = 0                              // Reset total time
 			quotaResetTime = time.Now().Add(24 * time.Hour) // Set next reset
 		}
-		if totalMotorTime+req.Duration > motorQuota { // If quota exceeded
-			motorQuotaMutex.Unlock() // Unlock
-			// Quota exceeded, skip this request
-			continue
-		}
-		totalMotorTime += req.Duration // Add to total time
-		motorQuotaMutex.Unlock()       // Unlock
+		totalMotorTime += req.Duration // Only update total time
+		motorQuotaMutex.Unlock()
 
-		// --- Motor control logic (commented out) ---
+		// --- Motor control logic ---
 		mqtt.Publish("motor/control", "on")  // Send ON command
 		time.Sleep(req.Duration)             // Wait for duration
 		mqtt.Publish("motor/control", "off") // Send OFF command
