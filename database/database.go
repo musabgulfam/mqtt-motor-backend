@@ -3,8 +3,10 @@
 package database // Declares the package name
 
 import ( // Import required packages
+	// Project config
 	"go-mqtt-backend/models" // User model
 
+	// Password hashing
 	"gorm.io/driver/sqlite" // SQLite driver for GORM
 	"gorm.io/gorm"          // GORM ORM
 )
