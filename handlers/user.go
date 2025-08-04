@@ -45,8 +45,8 @@ func Login(c *gin.Context) { // Handler for user login
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}) // Return error if invalid
 		return
 	}
-	var user models.User                                                                   // Declare user variable
-	if err := database.DB.Where("email = ?", input.Email).First(&user).Error; err != nil { // Find user by email
+	var user models.User                                                                      // Declare user variable
+	if err := database.DB.Where("username = ?", input.Email).First(&user).Error; err != nil { // Find user by email
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"}) // Return error if not found
 		return
 	}
@@ -57,17 +57,9 @@ func Login(c *gin.Context) { // Handler for user login
 	// JWT generation
 	cfg := config.Load()                                              // Load config for JWT secret
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{ // Create JWT token
-		"sub":   user.ID,                               // Add subject (user ID)
-		"exp":   time.Now().Add(time.Hour * 72).Unix(), // Set expiration (72 hours)
-		"iat":   time.Now().Unix(),                     // Issued at time
-		"iss":   "go-mqtt-backend",                     // Issuer (application name)
-		"email": user.Email,                            // Include user email in token
+		"user_id": user.ID,                               // Add user ID to token
+		"exp":     time.Now().Add(time.Hour * 72).Unix(), // Set expiration (72 hours)
 	})
-	tokenString, err := token.SignedString([]byte(cfg.JWTSecret)) // Sign token
-	if err != nil {                                               // Check for signing error
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not create token"}) // Return error if signing fails
-		return
-	}
-	// Return token in response
-	c.JSON(http.StatusOK, gin.H{"token": tokenString}) // Return token
+	tokenString, _ := token.SignedString([]byte(cfg.JWTSecret)) // Sign token
+	c.JSON(http.StatusOK, gin.H{"token": tokenString})          // Return token
 }

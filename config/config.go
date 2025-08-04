@@ -3,9 +3,7 @@
 package config // Declares the package name
 
 import ( // Import required packages
-
 	"os" // For reading environment variables
-	// For loading .env files
 )
 
 type Config struct { // Config struct holds all configuration values

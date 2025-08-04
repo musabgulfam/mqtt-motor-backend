@@ -36,9 +36,20 @@ func main() { // Main function, program entry point
 	api := r.Group("/api")               // Create a route group for protected endpoints
 	api.Use(middleware.AuthMiddleware()) // Apply JWT authentication middleware
 	{
-		api.POST("/send", handlers.SendCommand)          // Protected: send MQTT command
-		api.GET("/device", handlers.GetDeviceData)       // Protected: get device data
-		api.POST("/motor", handlers.EnqueueMotorRequest) // Protected: enqueue motor request
+		api.POST("/send", handlers.SendCommand)    // Protected: send MQTT command
+		api.GET("/device", handlers.GetDeviceData) // Protected: get device data
+		api.POST("/motor/on", handlers.EnqueueMotorRequest) // Protected: queue motor request
+		api.GET("/motor/status", handlers.GetSystemStatus)  // Protected: get system status
+	}
+	
+	// Admin routes (require admin role + JWT authentication)
+	// These endpoints require both authentication AND admin role
+	// The AdminMiddleware extends AuthMiddleware to check for admin role
+	admin := r.Group("/api/admin")
+	admin.Use(middleware.AdminMiddleware()) // Apply admin authentication middleware
+	{
+		admin.POST("/shutdown", handlers.AdminForceShutdown) // Admin: force shutdown
+		admin.POST("/restart", handlers.AdminRestart)        // Admin: restart system
 	}
 
 	// STEP 3: Start the web server
